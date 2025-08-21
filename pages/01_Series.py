@@ -2,6 +2,7 @@
 import streamlit as st
 import plotly.express as px
 import pandas as pd
+from config import DEFAULT_DATA_DIR
 from lib_data import load_all_data, list_numeric_columns
 
 # Helpers para defaults (ver bloque arriba)
@@ -39,7 +40,7 @@ st.title("📈 Series temporales")
 with st.sidebar:
     st.header("Datos")
     if "data_dir" not in st.session_state:
-        st.session_state["data_dir"] = "data"
+        st.session_state["data_dir"] = DEFAULT_DATA_DIR
     if "nomina_path_in" not in st.session_state:
         st.session_state["nomina_path_in"] = "Nomina.txt"
     if "include_aa" not in st.session_state:
@@ -106,3 +107,4 @@ st.plotly_chart(fig2, use_container_width=True)
 
 st.subheader("Tabla")
 st.dataframe(df.sort_values(["Etiqueta","Mes"]).reset_index(drop=True), use_container_width=True, height=380)
+
