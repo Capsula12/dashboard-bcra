@@ -2,6 +2,7 @@
 import streamlit as st
 import plotly.express as px
 import pandas as pd
+from config import DEFAULT_DATA_DIR
 from lib_data import load_all_data, list_numeric_columns, normalize_series
 
 # Helpers para defaults (idénticos a 01)
@@ -39,7 +40,7 @@ st.title("🧭 Comparador multi-métrica")
 with st.sidebar:
     st.header("Datos")
     for k, v in [
-        ("data_dir", "data"),
+        ("data_dir", DEFAULT_DATA_DIR),
         ("nomina_path_in", "Nomina.txt"),
         ("include_aa", True),
         ("use_alias", False),
@@ -106,3 +107,4 @@ st.plotly_chart(fig, use_container_width=True)
 st.subheader("Tabla (datos usados)")
 st.dataframe(plot_df.sort_values(["Etiqueta","Métrica","Mes"]).reset_index(drop=True),
              use_container_width=True, height=380)
+
