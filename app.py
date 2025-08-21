@@ -1,5 +1,6 @@
 # app.py
 import streamlit as st
+from config import DEFAULT_DATA_DIR
 from lib_data import load_all_data
 
 st.set_page_config(page_title="Tablero BCRA - Bancos", layout="wide")
@@ -10,7 +11,7 @@ with st.sidebar:
 
     # Estado compartido (valores por defecto)
     if "data_dir" not in st.session_state:
-        st.session_state["data_dir"] = "data"
+        st.session_state["data_dir"] = DEFAULT_DATA_DIR   # antes: "data"
     if "nomina_path_in" not in st.session_state:
         st.session_state["nomina_path_in"] = "Nomina.txt"
     if "include_aa" not in st.session_state:
