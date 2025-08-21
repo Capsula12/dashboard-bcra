@@ -5,6 +5,20 @@ import pandas as pd
 from config import DEFAULT_DATA_DIR
 from lib_data import load_all_data, list_numeric_columns
 
+from config import DEFAULT_DATA_DIR  # asegurate de tener config.py con tu ID de Drive
+import streamlit as st
+
+# Estado compartido: inicializar solo si NO existe (mismos keys en toda la app)
+if "data_dir" not in st.session_state:
+    st.session_state["data_dir"] = DEFAULT_DATA_DIR  # gdrive:1rpOOCyJ15Xo2tYu9X6LiWE_Nh3CVVrPT
+if "nomina_path_in" not in st.session_state:
+    st.session_state["nomina_path_in"] = "Nomina.txt"
+if "include_aa" not in st.session_state:
+    st.session_state["include_aa"] = True   # por defecto: tildado
+if "use_alias" not in st.session_state:
+    st.session_state["use_alias"] = False   # por defecto: destildado
+
+
 # Helpers para defaults (ver bloque arriba)
 import unicodedata
 def _norm_txt(s: str) -> str:
@@ -107,4 +121,5 @@ st.plotly_chart(fig2, use_container_width=True)
 
 st.subheader("Tabla")
 st.dataframe(df.sort_values(["Etiqueta","Mes"]).reset_index(drop=True), use_container_width=True, height=380)
+
 
