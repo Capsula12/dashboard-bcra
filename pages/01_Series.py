@@ -1,32 +1,40 @@
-# pages/01_Series.py
 import streamlit as st
 import plotly.express as px
 import pandas as pd
+import unicodedata
+
 from config import DEFAULT_DATA_DIR
 from lib_data import load_all_data, list_numeric_columns
 
-from config import DEFAULT_DATA_DIR  # asegurate de tener config.py con tu ID de Drive
-import streamlit as st
+st.title("📈 Series temporales")
 
-# Estado compartido: inicializar solo si NO existe (mismos keys en toda la app)
+# ---------- Estado compartido (mismos defaults en toda la app) ----------
 if "data_dir" not in st.session_state:
-    st.session_state["data_dir"] = DEFAULT_DATA_DIR  # gdrive:1rpOOCyJ15Xo2tYu9X6LiWE_Nh3CVVrPT
+    st.session_state["data_dir"] = DEFAULT_DATA_DIR
 if "nomina_path_in" not in st.session_state:
     st.session_state["nomina_path_in"] = "Nomina.txt"
 if "include_aa" not in st.session_state:
-    st.session_state["include_aa"] = True   # por defecto: tildado
+    st.session_state["include_aa"] = True
 if "use_alias" not in st.session_state:
-    st.session_state["use_alias"] = False   # por defecto: destildado
+    st.session_state["use_alias"] = False
 
+# ---------- Sidebar ----------
+with st.sidebar:
+    st.header("Datos")
+    st.text_input("Carpeta de datos (.csv)", key="data_dir")
+    st.text_input("Archivo nómina", key="nomina_path_in")
+    st.checkbox("Incluir 'AA...'", key="include_aa")
+    st.checkbox("Usar alias", key="use_alias")
 
-# Helpers para defaults (ver bloque arriba)
-import unicodedata
+# ---------- Helpers para defaults ----------
 def _norm_txt(s: str) -> str:
-    if s is None: return ""
+    if s is None:
+        return ""
     s = str(s)
     s = unicodedata.normalize("NFKD", s)
     s = "".join(ch for ch in s if not unicodedata.combining(ch))
     return s.lower()
+
 def pick_default_entity(entities):
     cand = None
     for e in entities:
@@ -40,33 +48,20 @@ def pick_default_entity(entities):
             if e.strip().lstrip("0") == code.lstrip("0"):
                 return e
     return cand or (entities[0] if entities else None)
+
 def pick_default_metric(num_cols):
     for c in num_cols:
-        if _norm_txt(c).startswith("r1"): return c
+        if _norm_txt(c).startswith("r1"):
+            return c
     for c in num_cols:
-        if "roe" in _norm_txt(c): return c
+        if "roe" in _norm_txt(c):
+            return c
     for c in num_cols:
-        if "rendimiento anual del patrimonio" in _norm_txt(c): return c
+        if "rendimiento anual del patrimonio" in _norm_txt(c):
+            return c
     return num_cols[0] if num_cols else None
 
-st.title("📈 Series temporales")
-
-with st.sidebar:
-    st.header("Datos")
-    if "data_dir" not in st.session_state:
-        st.session_state["data_dir"] = DEFAULT_DATA_DIR
-    if "nomina_path_in" not in st.session_state:
-        st.session_state["nomina_path_in"] = "Nomina.txt"
-    if "include_aa" not in st.session_state:
-        st.session_state["include_aa"] = True
-    if "use_alias" not in st.session_state:
-        st.session_state["use_alias"] = False
-
-    st.text_input("Carpeta de datos (.csv)", key="data_dir")
-    st.text_input("Archivo nómina", key="nomina_path_in")
-    st.checkbox("Incluir 'AA...'", key="include_aa")
-    st.checkbox("Usar alias", key="use_alias")
-
+# ---------- Carga de datos ----------
 df, seps, _ = load_all_data(
     st.session_state["data_dir"],
     st.session_state["nomina_path_in"],
@@ -79,14 +74,18 @@ if df.empty:
 
 df["Mes"] = pd.to_datetime(df["Mes"], errors="coerce")
 valid = df["Mes"].dropna()
+if valid.empty:
+    st.error("No hay columna 'Mes' válida en los datos.")
+    st.stop()
+
 min_mes, max_mes = valid.min().to_pydatetime(), valid.max().to_pydatetime()
-rango = st.slider("Rango de meses", min_mes, max_mes, (min_mes, max_mes), format="YYYY-MM")
+rango = st.slider("Rango de meses", min_value=min_mes, max_value=max_mes, value=(min_mes, max_mes), format="YYYY-MM")
 df = df[(df["Mes"] >= pd.Timestamp(rango[0])) & (df["Mes"] <= pd.Timestamp(rango[1]))]
 
+# ---------- Filtros ----------
 entidades = sorted(df["Etiqueta"].dropna().unique())
 default_ent = pick_default_entity(entidades)
 sel_ent = st.multiselect("Entidades (opcional)", entidades, default=[default_ent] if default_ent else [])
-
 if sel_ent:
     df = df[df["Etiqueta"].isin(sel_ent)]
 
@@ -99,6 +98,7 @@ default_metric = pick_default_metric(num_cols)
 metric_idx = num_cols.index(default_metric) if default_metric in num_cols else 0
 metric = st.selectbox("Indicador", num_cols, index=metric_idx)
 
+# ---------- Gráfico serie ----------
 st.subheader("Serie temporal")
 fig = px.line(df, x="Mes", y=metric, color="Etiqueta",
               labels={"Mes": "Mes", metric: metric, "Etiqueta": "Entidad"},
@@ -106,6 +106,7 @@ fig = px.line(df, x="Mes", y=metric, color="Etiqueta",
 fig.update_layout(height=460, legend_title_text="Entidad")
 st.plotly_chart(fig, use_container_width=True)
 
+# ---------- Top-N ----------
 st.subheader("Top-N por mes")
 meses = sorted(df["Mes"].dropna().unique())
 mes_sel = st.selectbox("Mes", [m.to_pydatetime() for m in meses],
@@ -116,10 +117,10 @@ df_mes = df_mes.sort_values(metric, ascending=False).head(topn)
 fig2 = px.bar(df_mes, x=metric, y="Etiqueta", orientation="h",
               labels={"Etiqueta": "Entidad", metric: metric},
               title=f"Top {topn} en {pd.Timestamp(mes_sel).strftime('%Y-%m')} – {metric}")
-fig2.update_layout(height=600, yaxis={'categoryorder':'total ascending'})
+fig2.update_layout(height=600, yaxis={'categoryorder': 'total ascending'})
 st.plotly_chart(fig2, use_container_width=True)
 
+# ---------- Tabla ----------
 st.subheader("Tabla")
-st.dataframe(df.sort_values(["Etiqueta","Mes"]).reset_index(drop=True), use_container_width=True, height=380)
-
-
+st.dataframe(df.sort_values(["Etiqueta","Mes"]).reset_index(drop=True),
+             use_container_width=True, height=380)
