@@ -2,6 +2,7 @@
 import streamlit as st
 import plotly.express as px
 import pandas as pd
+from config import DEFAULT_DATA_DIR
 from lib_data import load_all_data, list_numeric_columns, normalize_series
 
 # Helpers para defaults (idénticos)
@@ -39,7 +40,7 @@ st.title("🧮 Calculadora de métricas")
 with st.sidebar:
     st.header("Datos")
     for k, v in [
-        ("data_dir", "data"),
+        ("data_dir", DEFAULT_DATA_DIR),
         ("nomina_path_in", "Nomina.txt"),
         ("include_aa", True),
         ("use_alias", False),
@@ -107,3 +108,4 @@ norm = st.selectbox("Normalización (resultado)", ["Raw", "Base 100 (primer mes)
 def apply_op(s1, op, s2):
     if op == "+": return s1 + s2
     if op ==
+
